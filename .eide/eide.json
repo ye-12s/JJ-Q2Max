@@ -150,6 +150,9 @@
           },
           {
             "path": "App/Src/Initial.c"
+          },
+          {
+            "path": "Core/Src/ringbuffer.c"
           }
         ],
         "folders": []

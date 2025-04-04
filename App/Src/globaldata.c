@@ -2,6 +2,8 @@
 
 ringbuffer_t g_uart_rb;
 
+ble_info_t g_ble_info;
+
 App_Info g_App_Info;
 
 unsigned char com1_timeout_count;

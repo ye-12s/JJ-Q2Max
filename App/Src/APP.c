@@ -28,7 +28,9 @@ static inline void uart_process_task( void );
 
 void TaskStart( void )
 {
-	if( !HAL_GPIO_ReadPin( GPIOC, GPIO_PIN_12 ) )
+	// if( !HAL_GPIO_ReadPin( GPIOC, GPIO_PIN_12 ) )
+	if( g_ble_info.config.strVal.connect_state == 0
+	        && g_ble_info.connectState != 2 )
 	{
 		g_BT_Connect_Flag = 0;
 		SPP_Connect_Flag = 0;
@@ -342,6 +344,72 @@ void TaskStart( void )
 	}
 }
 
+char *get_cmd_strstr( char *cmd, const char *str, int len )
+{
+	char *p = strstr( cmd, str );
+	if( p != NULL )
+	{
+		return p + len + 1; // +1 for '+'
+	}
+	return NULL;
+}
+
+static void process_command( char *cmd, uint32_t len )
+{
+	char *p = 0;
+	if( ( p = get_cmd_strstr( cmd, "AT", 2 ) ) )
+	{
+		strncpy( g_ble_info.version, p, sizeof( g_ble_info.version ) );
+	}
+	else if( ( p = get_cmd_strstr( cmd, "QA", 2 ) ) )
+	{
+		int value = atoi( p );
+		g_ble_info.volume = value;
+	}
+	else if( ( p = get_cmd_strstr( cmd, "TD", 2 ) ) )
+	{
+		strncpy( g_ble_info.AudioName, p, sizeof( g_ble_info.AudioName ) );
+	}
+	else if( ( p = get_cmd_strstr( cmd, "TM", 2 ) ) )
+	{
+		strncpy( g_ble_info.bleName, p, sizeof( g_ble_info.bleName ) );
+	}
+	else if( ( p = get_cmd_strstr( cmd, "T6", 2 ) ) )
+	{
+		g_ble_info.serverUUID = strtol( p, NULL, 16 );
+	}
+	else if( ( p = get_cmd_strstr( cmd, "T7", 2 ) ) )
+	{
+		g_ble_info.charUUID = strtol( p, NULL, 16 );
+	}
+	else if( ( p = get_cmd_strstr( cmd, "T8", 2 ) ) )
+	{
+		g_ble_info.charUUID2 = strtol( p, NULL, 16 );
+	}
+	else if( ( p = get_cmd_strstr( cmd, "T9", 2 ) ) )
+	{
+		g_ble_info.charUUID3 = strtol( p, NULL, 16 );
+	}
+	else if( ( p = get_cmd_strstr( cmd, "TL", 2 ) ) )
+	{
+		int value = atoi( p );
+		g_ble_info.bleState = value;
+		if( value == 3 )
+		{
+			g_ble_info.config.strVal.connect_state = 1;
+		}
+		else
+		{
+			g_ble_info.config.strVal.connect_state = 0;
+		}
+	}
+	else if( ( p = get_cmd_strstr( cmd, "TS", 2 ) ) )
+	{
+		int value = atoi( p );
+		g_ble_info.connectState = value;
+	}
+}
+
 void Task_USART1_Recv( void )
 {
 #if 0
@@ -374,6 +442,26 @@ void Task_USART1_Recv( void )
 
 	uart_process_task();
 
+	if( g_fft_frame_flag == 1 )
+	{
+		if( g_Combo_flag == true )
+		{
+			if( m_combo_mode == 0 )
+			{
+				fft_buf[7]  = m_combo_buf[0];
+			}
+			else
+			{
+				fft_buf[7]  = m_combo_buf[1];
+			}
+			g_Combo_flag = false;
+		}
+		else
+		{
+			g_fft_frame_flag = 0;
+		}
+		Proc_USART1_BDP( fft_buf, 9 );
+	}
 }
 uint32_t packet_count = 0;
 static inline void uart_process_task( void )
@@ -383,49 +471,80 @@ static inline void uart_process_task( void )
 	const char DCP_HEAD = 0xfc;
 	const uint32_t BDP_LEN = 9;
 	uint8_t cache_char = 0;
-	uint32_t packet_flag = 0;
+	static uint32_t packet_flag = 0;
 	static uint8_t cmd_buff[128];
 	static uint32_t cmd_len = 0;
-	if( !rb_is_empty( &g_uart_rb ) )
+	if( rb_is_empty( &g_uart_rb ) )
 	{
-		if( rb_read( &g_uart_rb, &cache_char, 1 ) == 1 )
-		{
-			static uint8_t packet_len = 0;
-			if ( cache_char == DCP_HEAD )
-			{
-				cmd_len = 0; // 检测到包头，清空缓冲区，前面可能有垃圾数据，或丢失数据
-				cmd_buff[cmd_len++] = cache_char;
-				packet_len = 1;
-			}
-			else if ( cmd_len > 0 && cmd_len < BDP_LEN )//TODO此处后续需要加入新的缓冲区，做指令数据的存储
-			{
-				cmd_buff[cmd_len++] = cache_char;
-				packet_len++;
-			}
+		return;
+	}
 
-			if ( packet_len == 9 )
+	if( rb_read( &g_uart_rb, &cache_char, 1 ) == 1 )
+	{
+		static uint8_t packet_len = 0;
+		if ( cache_char == DCP_HEAD )
+		{
+			cmd_len = 0; // 检测到包头，清空缓冲区，前面可能有垃圾数据，或丢失数据
+			cmd_buff[cmd_len++] = cache_char;
+			packet_len = 1;
+			packet_flag = PACKET_FLAG_TRANSMIT;
+		}
+		//TODO此处后续需要加入新的缓冲区，做指令数据的存储
+		else if ( ( packet_flag == PACKET_FLAG_TRANSMIT ) && cmd_len > 0 && cmd_len < BDP_LEN )
+		{
+			cmd_buff[cmd_len++] = cache_char;
+			packet_len++;
+		}
+
+		if ( packet_flag == PACKET_FLAG_TRANSMIT && packet_len == BDP_LEN )
+		{
+			// 处理透传数据包
+			Proc_USART1_BDP( cmd_buff, cmd_len );
+			cmd_len = 0;
+			packet_len = 0;
+			packet_flag = 0;
+		}
+
+		// 检测命令数据
+		if ( packet_flag != PACKET_FLAG_TRANSMIT )
+		{
+			cmd_buff[cmd_len++] = cache_char;
+
+			if ( cache_char == '\n' ) // 命令以换行符结尾
 			{
-				// Process the 9-byte packet stored in cmd_buff
+				cmd_buff[cmd_len] = '\0'; // 确保字符串以NULL结尾
+				// 处理命令数据
+				process_command( ( char * )cmd_buff, cmd_len );
 				cmd_len = 0;
-				packet_len = 0;
-				//              static char str_buf[256] = {0};
-				//
-				//              packet_count++;
-				//              snprintf( str_buf, sizeof( str_buf ), "Received count(%d) packet\r\n", packet_count );
-				//              static char hex_buf[48] = {0};
-				//              for( int i = 0; i < 9; i++ )
-				//              {
-				//                  snprintf( hex_buf + 3 * i, sizeof( hex_buf ), "%02X ", cmd_buff[i] );
-				//              }
-				//              strcat( str_buf, hex_buf );
-				//              strcat( str_buf, "\r\n" );
-				//              int len = strlen( str_buf );
-				//              extern UART_HandleTypeDef huart1;
-				//              HAL_UART_Transmit( &huart1, str_buf, len, 0xff );
-				//              memset( str_buf, 0, sizeof( str_buf ) );
-				Proc_USART1_BDP( cmd_buff, cmd_len );
+			}
+			else if ( cmd_len >= sizeof( cmd_buff ) ) // 防止缓冲区溢出
+			{
+				cmd_len = 0;
 			}
 		}
+
+		// if ( packet_len == 9 )
+		// {
+		//  // Process the 9-byte packet stored in cmd_buff
+		//  cmd_len = 0;
+		//  packet_len = 0;
+		//  //              static char str_buf[256] = {0};
+		//  //
+		//  //              packet_count++;
+		//  //              snprintf( str_buf, sizeof( str_buf ), "Received count(%d) packet\r\n", packet_count );
+		//  //              static char hex_buf[48] = {0};
+		//  //              for( int i = 0; i < 9; i++ )
+		//  //              {
+		//  //                  snprintf( hex_buf + 3 * i, sizeof( hex_buf ), "%02X ", cmd_buff[i] );
+		//  //              }
+		//  //              strcat( str_buf, hex_buf );
+		//  //              strcat( str_buf, "\r\n" );
+		//  //              int len = strlen( str_buf );
+		//  //              extern UART_HandleTypeDef huart1;
+		//  //              HAL_UART_Transmit( &huart1, str_buf, len, 0xff );
+		//  //              memset( str_buf, 0, sizeof( str_buf ) );
+		//  Proc_USART1_BDP( cmd_buff, cmd_len );
+		// }
 	}
 }
 void Proc_USART1_BDP( unsigned char *pbuf, unsigned short len )

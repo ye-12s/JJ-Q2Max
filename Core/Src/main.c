@@ -77,18 +77,17 @@ int main( void )
 	MX_TIM4_Init();
 	Led_All_Off();
 	MX_USART1_UART_Init();
-	MX_IWDG_Init();
+	//  MX_IWDG_Init();
 
 	rb_init( &g_uart_rb, g_uart_rb_buf, UART_RB_SIZE );
 	//等待下一次接收中断
 	HAL_UART_Receive_IT( &huart1, &com1_recv_one_byte, 1 );
 
-	//  System_App_Init();
-
+	System_App_Init();
 
 	MY_ADC_Init();
 	TIM3_Init();
-	
+
 
 	mak_fft_start = true;
 	m_combo_mode =  0;
@@ -101,8 +100,8 @@ int main( void )
 	g_PAUSE_Trill_flg = false;
 	if( 0 == g_App_Mode_flag )
 	{
-		// Led_All_Off();
-		// Led_On();
+		Led_All_Off();
+		Led_On();
 	}
 	if( !HAL_GPIO_ReadPin( GPIOC, GPIO_PIN_12 ) )
 	{
@@ -137,7 +136,9 @@ int main( void )
 	/* Infinite loop */
 	while ( 1 )
 	{
-		if( ( SPP_Connect_Flag == 1 ) && ( mak_fft_start == true ) )
+		// if( ( SPP_Connect_Flag == 1 ) && ( mak_fft_start == true ) )
+		//此处表示蓝牙开始播放音乐
+		if( ( g_ble_info.connectState == 0x02 ) && ( mak_fft_start == true ) )
 		{
 			if( 1 == KONGJI_Flag )
 			{
@@ -150,9 +151,9 @@ int main( void )
 			n_done = 0;
 
 			adc_d = MAG[1];
-			if( adc_d  > 22 )
+			if( adc_d  > 5 )
 			{
-				adc_d -= 22;
+				adc_d -= 5;
 			}
 			else
 			{
@@ -160,9 +161,9 @@ int main( void )
 			}
 			adc_d = adc_d << 1;
 
-			if( ( adc_d  > 44 ) && ( mak_fft_start == true ) )
+			if( ( adc_d > 5 ) && ( mak_fft_start == true ) )
 			{
-				adc_d = 44;
+				adc_d = 5;
 				if( !flag_fft_first )
 				{
 					Led_All_Off();

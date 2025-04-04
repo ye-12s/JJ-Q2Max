@@ -6,7 +6,7 @@
 #include "ringbuffer.h"
 
 extern ringbuffer_t g_uart_rb;
-
+extern ble_info_t g_ble_info; //蓝牙信息
 extern App_Info g_App_Info;  //应用程序信息Flash存储
 extern unsigned short   a;
 extern unsigned char com1_timeout_count;  //串口1通信超时计数器
