@@ -24,13 +24,24 @@ extern   volatile uint32_t          fft_start_count;
 extern   bool                       First_FFT_flg;
 extern   bool                       g_PAUSE_Trill_flg;
 void trill_display( void );
-static inline void uart_process_task( void );
+void uart_process_task( void );
 
 void TaskStart( void )
 {
 	// if( !HAL_GPIO_ReadPin( GPIOC, GPIO_PIN_12 ) )
-	if( g_ble_info.config.strVal.connect_state == 0
-	        && g_ble_info.connectState != 2 )
+	// if( g_ble_info.config.strVal.connect_state == 0
+	//         && g_ble_info.connectState != 2 )
+
+	// if( BLE_is_playing() )
+	// {
+	//  HAL_GPIO_WritePin( GPIOA, GPIO_PIN_11, GPIO_PIN_RESET );
+	// }
+	// else
+	// {
+	//  HAL_GPIO_WritePin( GPIOA, GPIO_PIN_11, GPIO_PIN_SET );
+	// }
+
+	if( BLE_is_connected() == 0 )
 	{
 		g_BT_Connect_Flag = 0;
 		SPP_Connect_Flag = 0;
@@ -61,7 +72,7 @@ void TaskStart( void )
 	}
 	Task_USART1_Recv();
 
-	if( ( 2 == g_App_Mode )    || ( 3 == g_App_Mode ) || ( 7 == g_App_Mode ) )
+	if( ( 2 == g_App_Mode ) || ( 3 == g_App_Mode ) || ( 7 == g_App_Mode ) )
 	{
 		g_Push_Button_Value = Scan_Push_Button( 0 );
 		if( 2 == g_Cycle_Light_Flag[0] )
@@ -337,10 +348,22 @@ void TaskStart( void )
 		}
 	}
 
+
+
 	if( g_500ms_flag == 1 )
 	{
 		g_500ms_flag = 0;
 		IWDG_Feed();
+		//        if( BLE_is_connected() )
+		//        {
+		//            static uint8_t count = 0;
+		//            count++;
+		//            if( count >= 10 )
+		//            {
+		//                count = 0;
+		//                BLE_Read_BleState();
+		//            }
+		//        }
 	}
 }
 
@@ -357,40 +380,41 @@ char *get_cmd_strstr( char *cmd, const char *str, int len )
 static void process_command( char *cmd, uint32_t len )
 {
 	char *p = 0;
-	if( ( p = get_cmd_strstr( cmd, "AT", 2 ) ) )
-	{
-		strncpy( g_ble_info.version, p, sizeof( g_ble_info.version ) );
-	}
-	else if( ( p = get_cmd_strstr( cmd, "QA", 2 ) ) )
-	{
-		int value = atoi( p );
-		g_ble_info.volume = value;
-	}
-	else if( ( p = get_cmd_strstr( cmd, "TD", 2 ) ) )
-	{
-		strncpy( g_ble_info.AudioName, p, sizeof( g_ble_info.AudioName ) );
-	}
-	else if( ( p = get_cmd_strstr( cmd, "TM", 2 ) ) )
-	{
-		strncpy( g_ble_info.bleName, p, sizeof( g_ble_info.bleName ) );
-	}
-	else if( ( p = get_cmd_strstr( cmd, "T6", 2 ) ) )
-	{
-		g_ble_info.serverUUID = strtol( p, NULL, 16 );
-	}
-	else if( ( p = get_cmd_strstr( cmd, "T7", 2 ) ) )
-	{
-		g_ble_info.charUUID = strtol( p, NULL, 16 );
-	}
-	else if( ( p = get_cmd_strstr( cmd, "T8", 2 ) ) )
-	{
-		g_ble_info.charUUID2 = strtol( p, NULL, 16 );
-	}
-	else if( ( p = get_cmd_strstr( cmd, "T9", 2 ) ) )
-	{
-		g_ble_info.charUUID3 = strtol( p, NULL, 16 );
-	}
-	else if( ( p = get_cmd_strstr( cmd, "TL", 2 ) ) )
+	// if( ( p = get_cmd_strstr( cmd, "AT", 2 ) ) )
+	// {
+	//  strncpy( g_ble_info.version, p, sizeof( g_ble_info.version ) );
+	// }
+	// else if( ( p = get_cmd_strstr( cmd, "QA", 2 ) ) )
+	// {
+	//  int value = atoi( p );
+	//  g_ble_info.volume = value;
+	// }
+	// else if( ( p = get_cmd_strstr( cmd, "TD", 2 ) ) )
+	// {
+	//  strncpy( g_ble_info.AudioName, p, sizeof( g_ble_info.AudioName ) );
+	// }
+	// else if( ( p = get_cmd_strstr( cmd, "TM", 2 ) ) )
+	// {
+	//  strncpy( g_ble_info.bleName, p, sizeof( g_ble_info.bleName ) );
+	// }
+	// else if( ( p = get_cmd_strstr( cmd, "T6", 2 ) ) )
+	// {
+	//  g_ble_info.serverUUID = strtol( p, NULL, 16 );
+	// }
+	// else if( ( p = get_cmd_strstr( cmd, "T7", 2 ) ) )
+	// {
+	//  g_ble_info.charUUID = strtol( p, NULL, 16 );
+	// }
+	// else if( ( p = get_cmd_strstr( cmd, "T8", 2 ) ) )
+	// {
+	//  g_ble_info.charUUID2 = strtol( p, NULL, 16 );
+	// }
+	// else if( ( p = get_cmd_strstr( cmd, "T9", 2 ) ) )
+	// {
+	//  g_ble_info.charUUID3 = strtol( p, NULL, 16 );
+	// }
+	// else
+	if( ( p = get_cmd_strstr( cmd, "TL", 2 ) ) )
 	{
 		int value = atoi( p );
 		g_ble_info.bleState = value;
@@ -464,7 +488,7 @@ void Task_USART1_Recv( void )
 	}
 }
 uint32_t packet_count = 0;
-static inline void uart_process_task( void )
+void uart_process_task( void )
 {
 #define PACKET_FLAG_TRANSMIT 0x01   //透传数据
 #define PACKET_FLAG_COMMAND  0x02   //命令数据
@@ -474,10 +498,20 @@ static inline void uart_process_task( void )
 	static uint32_t packet_flag = 0;
 	static uint8_t cmd_buff[128];
 	static uint32_t cmd_len = 0;
-	if( rb_is_empty( &g_uart_rb ) )
+
+	uint32_t tick = HAL_GetTick();
+
+	if( g_ble_info.bleState == 0x03 && ( tick - g_last_com_time > 30000 ) ) //30s
 	{
-		return;
+		//主动向BLE查找当前蓝牙状态，或默认蓝牙已经断开
+		BLE_Read_BleState();
+		g_last_com_time = tick; //重置时间
 	}
+
+	// if( rb_is_empty( &g_uart_rb ) )
+	// {
+	//  return;
+	// }
 
 	if( rb_read( &g_uart_rb, &cache_char, 1 ) == 1 )
 	{
@@ -498,11 +532,13 @@ static inline void uart_process_task( void )
 
 		if ( packet_flag == PACKET_FLAG_TRANSMIT && packet_len == BDP_LEN )
 		{
+			g_last_com_time = tick;
 			// 处理透传数据包
 			Proc_USART1_BDP( cmd_buff, cmd_len );
 			cmd_len = 0;
 			packet_len = 0;
 			packet_flag = 0;
+
 		}
 
 		// 检测命令数据
@@ -579,7 +615,8 @@ void Proc_USART1_BDP( unsigned char *pbuf, unsigned short len )
 		}
 	}
 
-	if( HAL_GPIO_ReadPin( GPIOC, GPIO_PIN_12 ) )
+	// if( HAL_GPIO_ReadPin( GPIOC, GPIO_PIN_12 ) )
+	if( BLE_is_connected() )
 	{
 		if( fft_start_count > 5 )
 		{

@@ -26,12 +26,45 @@ void Write_BLE_Config( void )
 {
 	Write_BT_UUID();
 	COM1_Send_BDP( CONST_STRING( "AT+CN00\r\n" ) );
-    HAL_Delay( 100 );
+	HAL_Delay( 100 );
 	COM1_Send_BDP( CONST_STRING( "AT+BMONEPUNCH Q2 Max\r\n" ) );      //ONEPUNCH Q2 Max
 	HAL_Delay( 100 );
+	COM1_Send_BDP( CONST_STRING( "AT+BDONEPUNCH Q2 Max Audio\r\n" ) );
+	HAL_Delay( 100 );
 	COM1_Send_BDP( CONST_STRING( "AT+CZ\r\n" ) );
+	HAL_Delay( 1000 );
 }
 
+uint8_t BLE_is_connected( void )
+{
+	uint8_t status = 0;
+
+	if( g_ble_info.bleState == 0x03 || g_ble_info.bleState == 0x05 )
+	{
+		status = 1;
+	}
+	if( g_ble_info.connectState >= 0x01 )
+	{
+		status = 1;
+	}
+	return status;
+}
+
+uint8_t BLE_is_playing( void )
+{
+	uint8_t status = 0;
+
+	if( g_ble_info.connectState == 0x02 )
+	{
+		status = 1;
+	}
+	return status;
+}
+
+void BLE_Read_BleState()
+{
+	COM1_Send_BDP( CONST_STRING( "AT+TL\r\n" ) );
+}
 
 void Write_BT_Name( void )
 {

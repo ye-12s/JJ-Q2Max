@@ -76,12 +76,12 @@ int main( void )
 	MX_TIM5_Init();
 	MX_TIM4_Init();
 	Led_All_Off();
-	MX_USART1_UART_Init();
-	//  MX_IWDG_Init();
 
 	rb_init( &g_uart_rb, g_uart_rb_buf, UART_RB_SIZE );
+	MX_USART1_UART_Init();
 	//等待下一次接收中断
 	HAL_UART_Receive_IT( &huart1, &com1_recv_one_byte, 1 );
+	//  MX_IWDG_Init();
 
 	System_App_Init();
 
@@ -103,43 +103,90 @@ int main( void )
 		Led_All_Off();
 		Led_On();
 	}
-	if( !HAL_GPIO_ReadPin( GPIOC, GPIO_PIN_12 ) )
-	{
-		g_BT_Connect_Flag = 0;
-		SPP_Connect_Flag = 0;
-		g_App_Mode_flag = 0;
-		if( g_BT_Connect_Flag == 0 )
-		{
-			Led_On_Mode1( g_BT_Connect_Flag );
-			if( g_App_Mode != 0 )
-			{
-				g_App_Mode = 1;
-			}
-		}
-	}
-	else
-	{
-		if( fft_start_count > 5 )
-		{
-			SPP_Connect_Flag = 1;
-			if( ( g_App_Mode_flag == 0 ) && ( g_BT_Connect_Flag == 0 )    )
-			{
-				Led_All_Off();
-				g_App_Mode_flag = 1;
-				g_App_Mode = 6;
-			}
-			fft_start_count = 5;
-		}
-	}
+
+	HAL_GPIO_WritePin( GPIOA, GPIO_PIN_11, GPIO_PIN_RESET );
+
+	// if( !HAL_GPIO_ReadPin( GPIOC, GPIO_PIN_12 ) )
+	// {
+	//  g_BT_Connect_Flag = 0;
+	//  SPP_Connect_Flag = 0;
+	//  g_App_Mode_flag = 0;
+	//  if( g_BT_Connect_Flag == 0 )
+	//  {
+	//      Led_On_Mode1( g_BT_Connect_Flag );
+	//      if( g_App_Mode != 0 )
+	//      {
+	//          g_App_Mode = 1;
+	//      }
+	//  }
+	// }
+	// else
+	// {
+	//  if( fft_start_count > 5 )
+	//  {
+	//      SPP_Connect_Flag = 1;
+	//      if( ( g_App_Mode_flag == 0 ) && ( g_BT_Connect_Flag == 0 )    )
+	//      {
+	//          Led_All_Off();
+	//          g_App_Mode_flag = 1;
+	//          g_App_Mode = 6;
+	//      }
+	//      fft_start_count = 5;
+	//  }
+	// }
 	start_job();
+	uint32_t old_tick = HAL_GetTick();
+
+	//  while( 1 )
+	//  {
+	//      void uart_process_task( void );
+	//      uart_process_task();
+	//      if( BLE_is_connected() )
+	//      {
+	//          if( fft_start_count > 5 )
+	//          {
+	//              SPP_Connect_Flag = 1;
+	//              if( ( g_App_Mode_flag == 0 ) && ( g_BT_Connect_Flag == 0 )    )
+	//              {
+	//                  Led_All_Off();
+	//                  g_App_Mode_flag = 1;
+	//                  g_App_Mode = 6;
+	//              }
+	//              fft_start_count = 5;
+	//          }
+	//      }
+	//      if( HAL_GetTick() - old_tick > 3000 )
+	//      {
+	//          break;
+	//      }
+	//  }
+
+	//  if( HAL_GetTick() - old_tick > 3000 )
+	//  {
+	//      g_BT_Connect_Flag = 0;
+	//      SPP_Connect_Flag = 0;
+	//      g_App_Mode_flag = 0;
+	//      if( g_BT_Connect_Flag == 0 )
+	//      {
+	//          Led_On_Mode1( g_BT_Connect_Flag );
+	//          if( g_App_Mode != 0 )
+	//          {
+	//              g_App_Mode = 1;
+	//          }
+	//      }
+	//  }
+
+
 
 	/* Infinite loop */
 	while ( 1 )
 	{
 		// if( ( SPP_Connect_Flag == 1 ) && ( mak_fft_start == true ) )
 		//此处表示蓝牙开始播放音乐
-		if( ( g_ble_info.connectState == 0x02 ) && ( mak_fft_start == true ) )
+		// if( ( g_ble_info.connectState == 0x02 ) && ( mak_fft_start == true ) )
+		if( g_ble_info.bleState == 0x02 && BLE_is_playing() && mak_fft_start == true )
 		{
+			const uint32_t fft_adc_d_max = 20;
 			if( 1 == KONGJI_Flag )
 			{
 				g_App_Mode = 3;
@@ -151,9 +198,9 @@ int main( void )
 			n_done = 0;
 
 			adc_d = MAG[1];
-			if( adc_d  > 5 )
+			if( adc_d > fft_adc_d_max )
 			{
-				adc_d -= 5;
+				adc_d -= fft_adc_d_max;
 			}
 			else
 			{
@@ -161,9 +208,9 @@ int main( void )
 			}
 			adc_d = adc_d << 1;
 
-			if( ( adc_d > 5 ) && ( mak_fft_start == true ) )
+			if( ( adc_d > fft_adc_d_max ) && ( mak_fft_start == true ) )
 			{
-				adc_d = 5;
+				adc_d = fft_adc_d_max;
 				if( !flag_fft_first )
 				{
 					Led_All_Off();

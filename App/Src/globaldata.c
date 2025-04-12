@@ -6,6 +6,8 @@ ble_info_t g_ble_info;
 
 App_Info g_App_Info;
 
+uint32_t g_last_com_time = 0;
+
 unsigned char com1_timeout_count;
 unsigned short com1_recvbyte_count, com1_recvbyte_count_1;
 unsigned char com1_buf[USART1_BDP_LEN] = {0};
