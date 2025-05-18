@@ -20,9 +20,15 @@
 #include "USE_JOB1.h"
 #include "job1.h"
 
+#include "multi_button.h"
+
+Button button[6];
+
 #define UART_RB_SIZE  1024
 
 static uint8_t g_uart_rb_buf[UART_RB_SIZE];
+
+
 
 volatile uint8_t   n_count;
 volatile uint8_t   n_done;
@@ -55,6 +61,41 @@ extern  unsigned char       SPP_Connect_Flag;
 extern  void    Set_LED_Mode_pwm( uint8_t  pwm );
 extern  void    Set_LED_Mode0( void );
 void SystemClock_Config( void );
+
+uint8_t button_read( uint8_t button_id )
+{
+	switch( button_id )
+	{
+		case 1:
+            return Press_AD1;
+		case 2:
+            return Press_AD2;
+		case 3:
+            return Press_AD3;
+		case 4:
+            return Press_AD4;
+		case 5:
+            return Press_AD5;
+		case 6:
+            return Press_AD6;
+		default:
+            return 0;
+    }
+}
+
+void btn_cb( void *arg )
+{
+	Button *btn = (Button *)arg;
+
+	if( btn->event == PRESS_DOWN )
+	{
+        if (g_App_Mode == 3)
+        {
+            Send_Boxing_Loc_BDP(btn->button_id);
+        }
+    }
+}
+
 
 int main( void )
 {
@@ -104,6 +145,13 @@ int main( void )
 		Led_On();
 	}
 
+
+	for( uint8_t i = 0; i < 6; i++ )
+	{
+		button_init( &button[i], button_read, 0, i + 1 );
+		button_attach( &button[i], PRESS_DOWN, btn_cb );
+		button_start( &button[i] );
+	}
 	HAL_GPIO_WritePin( GPIOA, GPIO_PIN_11, GPIO_PIN_RESET );
 
 	// if( !HAL_GPIO_ReadPin( GPIOC, GPIO_PIN_12 ) )
@@ -136,7 +184,7 @@ int main( void )
 	// }
 	start_job();
 	uint32_t old_tick = HAL_GetTick();
-
+    g_ble_info.bleState = 0x03;
 	//  while( 1 )
 	//  {
 	//      void uart_process_task( void );

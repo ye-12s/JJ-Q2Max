@@ -316,30 +316,31 @@ void SysTick_Handler(void)
 		//heartbeat																	//20240711
 		//job_heartbeat_tim( );		
 		job_press( );
-///////////////////////////////////////////////////  20240517  ADD	
-//		amplitude_cnt++;
-//		if(amplitude_cnt>rgb_led_time)
-//		{
-//			pwm_index++;
-//			
-//			if(pwm_index > (30-1))
-//			{
-//				pwm_index=0;
-//			}
-////			amplitude_cnt=0;
-////			rgb_led_time_flag=0;
-//		}
-//		else
-//		{
-//			rgb_led_time_flag=1;
-//		}
-/////////////////////////////////////////////////////////		
-  /* USER CODE END SysTick_IRQn 0 */
-  HAL_IncTick();
-  HAL_SYSTICK_IRQHandler();
-  /* USER CODE BEGIN SysTick_IRQn 1 */
+        button_ticks();
+        ///////////////////////////////////////////////////  20240517  ADD
+        //		amplitude_cnt++;
+        //		if(amplitude_cnt>rgb_led_time)
+        //		{
+        //			pwm_index++;
+        //
+        //			if(pwm_index > (30-1))
+        //			{
+        //				pwm_index=0;
+        //			}
+        ////			amplitude_cnt=0;
+        ////			rgb_led_time_flag=0;
+        //		}
+        //		else
+        //		{
+        //			rgb_led_time_flag=1;
+        //		}
+        /////////////////////////////////////////////////////////
+        /* USER CODE END SysTick_IRQn 0 */
+        HAL_IncTick();
+        HAL_SYSTICK_IRQHandler();
+        /* USER CODE BEGIN SysTick_IRQn 1 */
 
-  /* USER CODE END SysTick_IRQn 1 */
+        /* USER CODE END SysTick_IRQn 1 */
 }
 
 /******************************************************************************/

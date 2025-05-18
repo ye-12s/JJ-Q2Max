@@ -171,7 +171,7 @@ void TaskStart( void )
 					Led6_On();
 					g_Cycle_Light_Flag[5] = 1;
 				}
-				Send_Boxing_Loc_BDP( g_Push_Button_Value );
+				// Send_Boxing_Loc_BDP( g_Push_Button_Value );
 				g_Push_Button_Value = 0;
 			}
 		}
